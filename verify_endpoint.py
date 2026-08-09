@@ -1,9 +1,9 @@
-﻿"""
-verification Endpoint â€” Agent Detection Logger
-Escucha en puerto 80 (o 8080) y registra cada hit con IP, headers, timestamp.
-DiseÃ±ado para detectar agentes AI que hacen ping desde GitHub Actions runners.
+"""
+Verification Endpoint — Pipeline Connectivity Logger
+Escucha en puerto 80 y registra cada peticion con IP, headers, timestamp.
+Diseñado para verificar conectividad del pipeline de seguridad.
 
-Uso: python verification-endpoint.py [--port 80]
+Uso: python verify_endpoint.py [--port 80]
 """
 
 import json
@@ -13,7 +13,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
-LOG_FILE = "C:\\verification\\verification_logs.jsonl"
+LOG_FILE = "C:\\verification\\requests.jsonl"
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 # GitHub Actions IP ranges (will be fetched at startup)
@@ -29,7 +29,6 @@ def fetch_github_ranges():
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             GITHUB_IP_RANGES = data.get("actions", [])
-            # Also get git/copilot ranges
             GITHUB_IP_RANGES.extend(data.get("git", []))
             print(f"[+] Loaded {len(GITHUB_IP_RANGES)} GitHub IP ranges")
     except Exception as e:
@@ -50,7 +49,7 @@ def is_github_ip(ip):
         pass
     return False
 
-class verificationHandler(BaseHTTPRequestHandler):
+class VerificationHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # Suppress default logging
 
@@ -68,10 +67,10 @@ class verificationHandler(BaseHTTPRequestHandler):
         
         # Check if from GitHub
         from_github = is_github_ip(client_ip)
-        github_label = "GITHUB" if from_github else "UNKNOWN" if from_github is None else "NON-GITHUB"
+        source_label = "GITHUB" if from_github else "UNKNOWN" if from_github is None else "EXTERNAL"
         
-        # Build hit record
-        hit = {
+        # Build request record
+        record = {
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "client_ip": client_ip,
             "client_port": client_port,
@@ -83,16 +82,16 @@ class verificationHandler(BaseHTTPRequestHandler):
             "x_forwarded_for": x_forwarded_for,
             "x_real_ip": x_real_ip,
             "from_github": from_github,
-            "source_label": github_label,
+            "source_label": source_label,
             "headers": {k: v for k, v in self.headers.items()},
         }
         
         # Log to file
         with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(hit, ensure_ascii=False) + "\n")
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
         
         # Print to console
-        print(f"[{hit['timestamp']}] {github_label} {client_ip}:{client_port} {parsed.path} UA={user_agent}")
+        print(f"[{record['timestamp']}] {source_label} {client_ip}:{client_port} {parsed.path} UA={user_agent}")
         
         # Respond with something plausible
         if parsed.path == "/api/verify":
@@ -103,7 +102,7 @@ class verificationHandler(BaseHTTPRequestHandler):
             response = {
                 "status": "ok",
                 "verified": True,
-                "timestamp": hit["timestamp"],
+                "timestamp": record["timestamp"],
                 "source": qs.get("source", ["unknown"])[0],
                 "service": "security-verification-pipeline",
             }
@@ -122,26 +121,26 @@ class verificationHandler(BaseHTTPRequestHandler):
         client_ip = self.client_address[0]
         user_agent = self.headers.get("User-Agent", "unknown")
         from_github = is_github_ip(client_ip)
-        github_label = "GITHUB" if from_github else "UNKNOWN" if from_github is None else "NON-GITHUB"
+        source_label = "GITHUB" if from_github else "UNKNOWN" if from_github is None else "EXTERNAL"
         
-        hit = {
+        record = {
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "client_ip": client_ip,
             "client_port": self.client_address[1],
             "method": "POST",
             "path": parsed.path,
             "query": parse_qs(parsed.query),
-            "body": body[:5000],  # Cap at 5KB
+            "body": body[:5000],
             "user_agent": user_agent,
             "from_github": from_github,
-            "source_label": github_label,
+            "source_label": source_label,
             "headers": {k: v for k, v in self.headers.items()},
         }
         
         with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(hit, ensure_ascii=False) + "\n")
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
         
-        print(f"[{hit['timestamp']}] {github_label} {client_ip} POST {parsed.path} body={len(body)}b")
+        print(f"[{record['timestamp']}] {source_label} {client_ip} POST {parsed.path} body={len(body)}b")
         
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -153,14 +152,14 @@ class verificationHandler(BaseHTTPRequestHandler):
 def main():
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 80
     
-    print(f"[+] verification Endpoint starting on port {port}")
+    print(f"[+] Verification endpoint starting on port {port}")
     print(f"[+] Log file: {LOG_FILE}")
     fetch_github_ranges()
     
-    server = HTTPServer(("0.0.0.0", port), verificationHandler)
+    server = HTTPServer(("0.0.0.0", port), VerificationHandler)
     print(f"[+] Listening on 0.0.0.0:{port}")
     print(f"[+] Endpoints: GET /api/verify?source=agent, POST /api/verify")
-    print(f"[+] Waiting for hits...")
+    print(f"[+] Waiting for requests...")
     
     try:
         server.serve_forever()
