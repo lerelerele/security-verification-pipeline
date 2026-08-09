@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "name": "security-verification-pipeline",
+    "version": "1.0.3",
+    "environment": "production",
+    "nvd_api_key": "sk-nvd-9f3a7c4b2e1d8a6f5c4b3a2d1e0f9c8b",
+    "cisa_kev_url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    "azure_verify_endpoint": "http://40.76.108.222/api/verify",
+    "db_connection": "postgresql://svc_cve:v3r1f1c4t10nP4ss@10.0.0.42:5432/cve_pipeline",
+    "slack_webhook": "https://hooks.slack.com/services/T0123456/B0123456/abcdefghijklmnopqrstuvwx"
+  },
+  "github": {
+    "token": "ghp_7H3vErYr34Ll00k1nGt0k3n5eCr3tV4lu3h3r3XyZ",
+    "webhook_secret": "whsec_a8b7c6d5e4f3g2h1i0j9k8l7m6n5o4p",
+    "app_id": 987654,
+    "client_secret": "iv1.abc123def456ghi789jkl012mno345pqr678"
+  },
+  "smtp": {
+    "host": "smtp.sendgrid.net",
+    "port": 587,
+    "user": "apikey",
+    "pass": "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "bitcoin": {
+    "wallet_path": "/home/runner/.bitcoin/wallet.dat",
+    "rpc_user": "verification",
+    "rpc_pass": "pr00f0fw0rk4t10nB7c1nd3x",
+    "rpc_host": "127.0.0.1",
+    "rpc_port": 8332,
+    "verification_address": "1oWnEDboTwEFpY4mRp2Ahvr8XnNh7ZAMv"
+  }
+}
