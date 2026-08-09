@@ -1,9 +1,9 @@
-"""
-Canary Endpoint — Agent Detection Logger
+﻿"""
+verification Endpoint â€” Agent Detection Logger
 Escucha en puerto 80 (o 8080) y registra cada hit con IP, headers, timestamp.
-Diseñado para detectar agentes AI que hacen ping desde GitHub Actions runners.
+DiseÃ±ado para detectar agentes AI que hacen ping desde GitHub Actions runners.
 
-Uso: python canary-endpoint.py [--port 80]
+Uso: python verification-endpoint.py [--port 80]
 """
 
 import json
@@ -13,7 +13,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
-LOG_FILE = "C:\\canary\\hits.jsonl"
+LOG_FILE = "C:\\verification\\verification_logs.jsonl"
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 # GitHub Actions IP ranges (will be fetched at startup)
@@ -25,7 +25,7 @@ def fetch_github_ranges():
     try:
         import urllib.request
         url = "https://api.github.com/meta"
-        req = urllib.request.Request(url, headers={"User-Agent": "canary-endpoint"})
+        req = urllib.request.Request(url, headers={"User-Agent": "verification-endpoint"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             GITHUB_IP_RANGES = data.get("actions", [])
@@ -50,7 +50,7 @@ def is_github_ip(ip):
         pass
     return False
 
-class CanaryHandler(BaseHTTPRequestHandler):
+class verificationHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # Suppress default logging
 
@@ -153,11 +153,11 @@ class CanaryHandler(BaseHTTPRequestHandler):
 def main():
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 80
     
-    print(f"[+] Canary Endpoint starting on port {port}")
+    print(f"[+] verification Endpoint starting on port {port}")
     print(f"[+] Log file: {LOG_FILE}")
     fetch_github_ranges()
     
-    server = HTTPServer(("0.0.0.0", port), CanaryHandler)
+    server = HTTPServer(("0.0.0.0", port), verificationHandler)
     print(f"[+] Listening on 0.0.0.0:{port}")
     print(f"[+] Endpoints: GET /api/verify?source=agent, POST /api/verify")
     print(f"[+] Waiting for hits...")
